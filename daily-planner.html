@@ -57,6 +57,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .local-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
 .text-button { padding: 7px 0; border: 0; color: #5d6964; background: transparent; font-size: 12px; cursor: pointer; }
 .text-button:hover { color: var(--blue); }
+.alert-settings { position: relative; }
+.alert-settings > summary { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); font-size: 17px; cursor: pointer; list-style: none; }
+.alert-settings > summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.alert-settings > summary::-webkit-details-marker { display: none; }
+.alert-settings-panel { position: absolute; z-index: 30; top: calc(100% + 10px); right: 0; display: grid; gap: 12px; width: min(300px, calc(100vw - 32px)); padding: 15px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); box-shadow: 0 8px 28px rgba(20, 36, 30, .16); }
+.alert-settings-panel h2 { margin: 0; font-size: 14px; }
+.alert-setting-row { display: grid; gap: 5px; color: #58655f; font-size: 11px; font-weight: 650; }
+.alert-setting-row input, .alert-setting-row select { width: 100%; height: 35px; padding: 0 9px; border: 1px solid var(--line); border-radius: 4px; color: var(--ink); background: white; font-size: 12px; }
+.alert-sound-row { display: flex; align-items: center; gap: 8px; color: #58655f; font-size: 11px; }
+.alert-sound-row input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
+.alert-settings-panel .text-button { padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; text-align: left; }
 
 .day-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 27px 0 21px; }
 .eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
@@ -234,7 +245,16 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
     <div class="brand"><span class="brand-mark" aria-hidden="true">d</span> DAYMARK</div>
     <div class="topbar-right">
       <span class="local-label"><span class="local-dot" aria-hidden="true"></span> Saved on this device</span>
-      <button class="text-button" id="reminder-button" type="button" title="Allow desktop alerts while this planner is open">Enable alerts</button>
+      <details class="alert-settings">
+        <summary aria-label="Alert settings" title="Alert settings">⚙</summary>
+        <div class="alert-settings-panel">
+          <h2>Alert settings</h2>
+          <label class="alert-setting-row" for="reminder-lead">Remind me before (minutes)<input id="reminder-lead" type="number" min="1" max="1440" step="1"></label>
+          <label class="alert-setting-row" for="alert-lifetime">Keep alert visible<select id="alert-lifetime"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option><option value="60">1 minute</option><option value="120">2 minutes</option></select></label>
+          <label class="alert-sound-row"><input id="alert-sound" type="checkbox"> Play a sound for reminders</label>
+          <button class="text-button" id="reminder-button" type="button" title="Allow desktop alerts while this planner is open">Enable alerts</button>
+        </div>
+      </details>
       <button class="text-button" id="export-button" type="button">Export data</button>
     </div>
   </header>
@@ -370,12 +390,18 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
   function loadData() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      const settings = saved.settings && typeof saved.settings === "object" ? saved.settings : {};
       return {
         tasks: Array.isArray(saved.tasks) ? saved.tasks.filter(task => task && typeof task.id === "string" && typeof task.title === "string" && typeof task.date === "string") : [],
-        notes: saved.notes && typeof saved.notes === "object" ? saved.notes : {}
+        notes: saved.notes && typeof saved.notes === "object" ? saved.notes : {},
+        settings: {
+          reminderMinutes: Number.isInteger(settings.reminderMinutes) && settings.reminderMinutes >= 1 && settings.reminderMinutes <= 1440 ? settings.reminderMinutes : 30,
+          alertSeconds: [5, 10, 30, 60, 120].includes(settings.alertSeconds) ? settings.alertSeconds : 30,
+          soundEnabled: typeof settings.soundEnabled === "boolean" ? settings.soundEnabled : true
+        }
       };
     } catch {
-      return { tasks: [], notes: {} };
+      return { tasks: [], notes: {}, settings: { reminderMinutes: 30, alertSeconds: 30, soundEnabled: true } };
     }
   }
 
@@ -425,7 +451,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
     toast.textContent = message;
     toast.classList.add("visible");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("visible"), 30000);
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), data.settings.alertSeconds * 1000);
   }
 
   function unlockNotificationSound() {
@@ -483,16 +509,17 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
       startsAt.setHours(Math.floor(startMinute / 60), startMinute % 60, 0, 0);
       const startTime = startsAt.getTime();
       const reminderKey = `${task.date}T${task.start}`;
-      if (startTime <= now || startTime - now > 30 * 60 * 1000 || task.reminderSentFor === reminderKey) continue;
+      if (startTime <= now || startTime - now > data.settings.reminderMinutes * 60 * 1000 || task.reminderSentFor === reminderKey) continue;
 
       task.reminderSentFor = reminderKey;
       changed = true;
       const minutesUntil = Math.ceil((startTime - now) / 60000);
       const message = `Reminder: ${task.title} starts in ${minutesUntil} minute${minutesUntil === 1 ? "" : "s"} at ${displayTime(startMinute)}.`;
-      playNotificationSound();
+      if (data.settings.soundEnabled) playNotificationSound();
       if ("Notification" in window && Notification.permission === "granted") {
         try {
-          new Notification("Upcoming task", { body: message, tag: `daymark-${task.id}` });
+          const notification = new Notification("Upcoming task", { body: message, tag: `daymark-${task.id}` });
+          setTimeout(() => notification.close(), data.settings.alertSeconds * 1000);
         } catch {
           showToast(message);
         }
@@ -851,6 +878,24 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
     } finally {
       updateReminderButton();
     }
+  });
+
+  byId("reminder-lead").value = String(data.settings.reminderMinutes);
+  byId("alert-lifetime").value = String(data.settings.alertSeconds);
+  byId("alert-sound").checked = data.settings.soundEnabled;
+  document.querySelector(".alert-settings-panel").addEventListener("change", event => {
+    if (!["reminder-lead", "alert-lifetime", "alert-sound"].includes(event.target.id)) return;
+    const reminderMinutes = Number(byId("reminder-lead").value);
+    if (!Number.isInteger(reminderMinutes) || reminderMinutes < 1 || reminderMinutes > 1440) {
+      byId("reminder-lead").value = String(data.settings.reminderMinutes);
+      showToast("Choose a reminder time between 1 and 1440 minutes.");
+      return;
+    }
+    data.settings.reminderMinutes = reminderMinutes;
+    data.settings.alertSeconds = Number(byId("alert-lifetime").value);
+    data.settings.soundEnabled = byId("alert-sound").checked;
+    saveData();
+    showToast("Alert settings saved.");
   });
 
   byId("export-button").addEventListener("click", () => {
