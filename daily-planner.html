@@ -345,6 +345,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
   let focusRemaining = FOCUS_SECONDS;
   let focusEndTime = 0;
   let focusRunning = false;
+  let notificationAudio = null;
 
   const byId = id => document.getElementById(id);
   const dateTitle = byId("date-title");
@@ -427,6 +428,29 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
     toastTimer = setTimeout(() => toast.classList.remove("visible"), 30000);
   }
 
+  function unlockNotificationSound() {
+    if (!notificationAudio && window.AudioContext) notificationAudio = new AudioContext();
+    if (notificationAudio?.state === "suspended") notificationAudio.resume().catch(() => {});
+  }
+
+  function playNotificationSound() {
+    if (!notificationAudio || notificationAudio.state !== "running") return;
+    const startedAt = notificationAudio.currentTime;
+    const oscillator = notificationAudio.createOscillator();
+    const gain = notificationAudio.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, startedAt);
+    oscillator.frequency.setValueAtTime(660, startedAt + 0.18);
+    gain.gain.setValueAtTime(0.0001, startedAt);
+    gain.gain.exponentialRampToValueAtTime(0.12, startedAt + 0.025);
+    gain.gain.setValueAtTime(0.12, startedAt + 0.18);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startedAt + 0.42);
+    oscillator.connect(gain);
+    gain.connect(notificationAudio.destination);
+    oscillator.start(startedAt);
+    oscillator.stop(startedAt + 0.43);
+  }
+
   function updateReminderButton() {
     const button = byId("reminder-button");
     if (!("Notification" in window)) {
@@ -465,6 +489,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
       changed = true;
       const minutesUntil = Math.ceil((startTime - now) / 60000);
       const message = `Reminder: ${task.title} starts in ${minutesUntil} minute${minutesUntil === 1 ? "" : "s"} at ${displayTime(startMinute)}.`;
+      playNotificationSound();
       if ("Notification" in window && Notification.permission === "granted") {
         try {
           new Notification("Upcoming task", { body: message, tag: `daymark-${task.id}` });
@@ -816,6 +841,8 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !byId("focus-backdrop").hidden) closeFocus();
   });
+  document.addEventListener("pointerdown", unlockNotificationSound, { once: true });
+  document.addEventListener("keydown", unlockNotificationSound, { once: true });
 
   byId("reminder-button").addEventListener("click", async () => {
     if (!("Notification" in window)) return;
