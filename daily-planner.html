@@ -1,0 +1,783 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f3f5f2">
+<title>Daymark | Daily planner</title>
+<style>
+:root {
+  color-scheme: light;
+  --paper: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #172321;
+  --muted: #78847f;
+  --line: #dce2dd;
+  --line-strong: #c8d1cb;
+  --coral: #ef563d;
+  --coral-pale: #fff0eb;
+  --blue: #3159d9;
+  --blue-pale: #edf1ff;
+  --yellow: #f2c94c;
+  --green: #13745a;
+  --green-pale: #e4f4ec;
+  --slot-height: 58px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+button, input, select { font: inherit; }
+button { color: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.app-shell { width: min(1320px, 100% - 56px); margin: 0 auto; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 66px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 800; letter-spacing: .07em; }
+.brand-mark { display: grid; width: 25px; height: 25px; place-items: center; border-radius: 7px 7px 7px 2px; color: white; background: var(--coral); font-size: 14px; font-weight: 900; }
+.topbar-right { display: flex; align-items: center; gap: 20px; }
+.local-label { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
+.local-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.text-button { padding: 7px 0; border: 0; color: #5d6964; background: transparent; font-size: 12px; cursor: pointer; }
+.text-button:hover { color: var(--blue); }
+
+.day-header { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 27px 0 21px; }
+.eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spacing: 0; line-height: 1.12; }
+.date-nav { display: flex; align-items: center; gap: 8px; }
+.date-title { min-width: 152px; color: #45534e; font-size: 13px; font-weight: 600; text-align: center; }
+.icon-button { display: inline-grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); cursor: pointer; }
+.icon-button:hover { border-color: var(--line-strong); background: #f9faf9; }
+.today-button { padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); font-size: 11px; font-weight: 600; cursor: pointer; }
+.today-button:hover { border-color: var(--line-strong); }
+
+.summary-strip { display: flex; align-items: center; gap: 20px; min-height: 46px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: #66736d; font-size: 11px; }
+.summary-stat { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.summary-stat strong { color: var(--ink); font-size: 12px; font-weight: 700; }
+.summary-divider { width: 1px; height: 16px; background: var(--line); }
+.capacity { display: flex; align-items: center; gap: 9px; min-width: 130px; margin-left: auto; }
+.capacity-track { flex: 1; height: 5px; overflow: hidden; border-radius: 99px; background: #dfe5e0; }
+.capacity-fill { width: 0; height: 100%; border-radius: inherit; background: var(--blue); transition: width .25s ease; }
+.capacity-fill.over { background: var(--coral); }
+
+.workspace { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, .9fr); gap: 34px; padding: 24px 0 50px; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 35px; margin-bottom: 13px; }
+.section-title { display: flex; align-items: baseline; gap: 9px; margin: 0; font-size: 15px; font-weight: 700; }
+.section-count { color: var(--muted); font-size: 11px; font-weight: 500; }
+.subtle-action { border: 0; color: var(--blue); background: none; font-size: 11px; font-weight: 650; cursor: pointer; }
+.subtle-action:hover { text-decoration: underline; }
+.subtle-action:disabled { color: #a1aaa5; cursor: not-allowed; text-decoration: none; }
+
+.capture-form { display: grid; grid-template-columns: minmax(100px, 1fr) 100px 112px 42px; gap: 7px; margin-bottom: 18px; }
+.capture-form input, .capture-form select { width: 100%; height: 39px; min-width: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--surface); font-size: 12px; }
+.capture-form input::placeholder { color: #9ba59f; }
+.add-button { display: grid; height: 39px; place-items: center; border: 0; border-radius: 5px; color: white; background: var(--ink); font-size: 20px; cursor: pointer; transition: background .15s ease; }
+.add-button:hover { background: var(--blue); }
+
+.timeline-shell { display: grid; grid-template-columns: 51px minmax(0, 1fr); border-top: 1px solid var(--line); }
+.time-rail { position: relative; height: calc(12 * var(--slot-height)); }
+.time-label { position: absolute; top: 0; right: 9px; transform: translateY(-50%); color: #87918c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.time-label:first-child { transform: translateY(0); }
+.events-area {
+  position: relative;
+  height: calc(12 * var(--slot-height));
+  border-left: 1px solid var(--line);
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(var(--slot-height) - 1px), var(--line) calc(var(--slot-height) - 1px) var(--slot-height));
+}
+.now-line { position: absolute; z-index: 2; right: 0; left: 0; height: 1px; background: var(--coral); pointer-events: none; }
+.now-line::before { position: absolute; top: -3px; left: -4px; width: 7px; height: 7px; border-radius: 50%; background: var(--coral); content: ""; }
+.event {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 27px;
+  padding: 5px 9px;
+  overflow: hidden;
+  border: 1px solid #d8e0ff;
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  background: var(--blue-pale);
+}
+.event.priority-must { border-color: #f2d5cd; border-left-color: var(--coral); background: var(--coral-pale); }
+.event.is-done { opacity: .55; }
+.event.is-done .event-name { text-decoration: line-through; }
+.event-check { flex: 0 0 auto; width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; }
+.event-content { min-width: 0; flex: 1; }
+.event-name { overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.event-meta { overflow: hidden; margin-top: 2px; color: #66736d; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.event-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+.event-time { width: 71px; padding: 3px 2px; border: 1px solid transparent; border-radius: 3px; color: #55635e; background: transparent; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; }
+.event-time:hover { border-color: #c8d0f2; background: rgba(255,255,255,.55); }
+.event-icon { display: grid; width: 24px; height: 24px; place-items: center; border: 0; border-radius: 3px; color: #57645f; background: transparent; cursor: pointer; }
+.event-icon:hover { color: var(--blue); background: rgba(255,255,255,.7); }
+.empty-timeline { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 5px; padding: 20px; color: var(--muted); text-align: center; pointer-events: none; }
+.empty-timeline strong { color: #4d5a55; font-size: 12px; }
+.empty-timeline span { max-width: 230px; font-size: 11px; line-height: 1.5; }
+
+.queue-panel { min-width: 0; padding-left: 1px; }
+.queue-heading { margin-bottom: 13px; }
+.queue-heading-right { display: flex; align-items: center; gap: 10px; }
+.plan-button { height: 31px; padding: 0 10px; border: 1px solid var(--ink); border-radius: 4px; color: white; background: var(--ink); font-size: 10px; font-weight: 650; cursor: pointer; }
+.plan-button:hover { border-color: var(--blue); background: var(--blue); }
+.plan-button:disabled { border-color: var(--line); color: #87918c; background: #e9edea; cursor: not-allowed; }
+.queue-list { display: grid; gap: 8px; }
+.queue-item { padding: 12px 12px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); }
+.queue-item.is-done { background: #f7f9f7; }
+.queue-item.is-done .queue-name { color: #88938d; text-decoration: line-through; }
+.queue-top { display: flex; align-items: start; gap: 9px; }
+.queue-check { flex: 0 0 auto; width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--green); cursor: pointer; }
+.queue-body { min-width: 0; flex: 1; }
+.queue-name { overflow-wrap: anywhere; font-size: 12px; font-weight: 650; line-height: 1.4; }
+.queue-details { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 10px; }
+.priority-tag { display: inline-flex; align-items: center; gap: 5px; }
+.priority-tag::before { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); content: ""; }
+.priority-tag.must::before { background: var(--coral); }
+.priority-tag.could::before { background: #a1aaa5; }
+.queue-actions { display: flex; align-items: center; gap: 6px; margin: 9px 0 0 25px; }
+.small-button { min-height: 27px; padding: 0 8px; border: 1px solid var(--line); border-radius: 4px; color: #43504a; background: white; font-size: 10px; font-weight: 600; cursor: pointer; }
+.small-button:hover { border-color: var(--blue); color: var(--blue); }
+.small-button.primary { border-color: #d5ddff; color: var(--blue); background: var(--blue-pale); }
+.small-button.danger { margin-left: auto; border-color: transparent; color: #8c7772; background: transparent; }
+.small-button.danger:hover { border-color: #f2d5cd; color: var(--coral); }
+.empty-queue { padding: 22px 15px; border: 1px dashed var(--line-strong); border-radius: 5px; color: var(--muted); text-align: center; }
+.empty-queue strong { display: block; margin-bottom: 5px; color: #4d5a55; font-size: 12px; }
+.empty-queue span { font-size: 11px; line-height: 1.5; }
+
+.day-note { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+.day-note label { display: block; margin-bottom: 8px; color: #58655f; font-size: 11px; font-weight: 700; }
+.day-note textarea { width: 100%; min-height: 70px; resize: vertical; padding: 10px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: var(--surface); font: inherit; font-size: 11px; line-height: 1.5; }
+.day-note textarea::placeholder { color: #a3aca7; }
+
+.alert-banner { display: none; margin: -3px 0 13px; padding: 9px 11px; border: 1px solid #f0d0c8; border-radius: 4px; color: #8c382b; background: #fff3ef; font-size: 11px; line-height: 1.45; }
+.alert-banner.visible { display: block; }
+.toast { position: fixed; z-index: 10; right: 22px; bottom: 20px; max-width: min(360px, calc(100vw - 32px)); padding: 11px 15px; transform: translateY(12px); border-radius: 5px; color: white; background: #1c2b27; box-shadow: 0 6px 24px rgba(20, 36, 30, .18); font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease; }
+.toast.visible { transform: translateY(0); opacity: 1; }
+
+.focus-backdrop { position: fixed; z-index: 20; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(18, 30, 26, .48); backdrop-filter: blur(3px); }
+.focus-backdrop[hidden] { display: none; }
+.focus-dialog { position: relative; display: grid; width: min(440px, 100%); justify-items: center; padding: 35px 32px 30px; border: 1px solid #e0e5e1; border-radius: 9px; background: var(--surface); box-shadow: 0 24px 80px rgba(15, 35, 27, .24); text-align: center; }
+.focus-close { position: absolute; top: 13px; right: 13px; }
+.focus-kicker { margin: 2px 0 12px; color: var(--green); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.focus-title { max-width: 330px; margin: 0 0 22px; overflow-wrap: anywhere; font-size: 22px; line-height: 1.25; }
+.timer-face { display: grid; width: 174px; aspect-ratio: 1; place-items: center; margin-bottom: 18px; border-radius: 50%; background: conic-gradient(var(--green) var(--timer-progress, 0%), #e7ece8 0); }
+.timer-inner { display: grid; width: 158px; aspect-ratio: 1; place-items: center; border-radius: 50%; background: white; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 38px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.focus-hint { min-height: 17px; margin: 0 0 19px; color: var(--muted); font-size: 11px; }
+.focus-controls { display: flex; gap: 8px; }
+.focus-start { min-width: 112px; height: 38px; padding: 0 17px; border: 0; border-radius: 4px; color: white; background: var(--ink); font-size: 11px; font-weight: 700; cursor: pointer; }
+.focus-start:hover { background: var(--green); }
+.focus-done { height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 4px; background: white; font-size: 11px; font-weight: 600; cursor: pointer; }
+
+@media (max-width: 850px) {
+  .app-shell { width: min(100% - 36px, 680px); }
+  .workspace { grid-template-columns: minmax(0, 1fr); gap: 29px; }
+  .queue-panel { padding: 0; }
+  .queue-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .day-note { max-width: none; }
+}
+
+@media (max-width: 540px) {
+  :root { --slot-height: 54px; }
+  .app-shell { width: calc(100% - 28px); }
+  .topbar { min-height: 55px; }
+  .topbar-right { gap: 11px; }
+  .local-label { font-size: 10px; }
+  .text-button { font-size: 11px; }
+  .day-header { align-items: start; flex-direction: column; gap: 15px; padding: 21px 0 16px; }
+  .date-nav { width: 100%; justify-content: space-between; }
+  .date-title { flex: 1; }
+  .summary-strip { flex-wrap: wrap; gap: 8px 14px; padding: 9px 0; }
+  .capacity { flex-basis: 100%; margin-left: 0; }
+  .workspace { gap: 27px; padding-top: 18px; }
+  .capture-form { grid-template-columns: minmax(0, 1fr) 82px 39px; }
+  .capture-form select { grid-column: 1 / 3; grid-row: 2; }
+  .add-button { grid-column: 3; grid-row: 1 / 3; height: auto; }
+  .queue-list { grid-template-columns: minmax(0, 1fr); }
+  .queue-heading-right { gap: 7px; }
+  .plan-button { padding: 0 8px; }
+  .event { right: 4px; left: 4px; gap: 6px; padding: 4px 5px; }
+  .event-time { width: 65px; font-size: 8px; }
+  .event-actions { gap: 0; }
+  .event-icon { width: 21px; }
+  .event-meta { font-size: 8px; }
+  .focus-dialog { padding: 32px 20px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">d</span> DAYMARK</div>
+    <div class="topbar-right">
+      <span class="local-label"><span class="local-dot" aria-hidden="true"></span> Saved on this device</span>
+      <button class="text-button" id="export-button" type="button">Export data</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="day-header" aria-label="Selected day">
+      <div>
+        <p class="eyebrow" id="weekday-label">YOUR DAILY PLAN</p>
+        <h1>Make today count.</h1>
+      </div>
+      <div class="date-nav">
+        <button class="icon-button" id="previous-day" type="button" aria-label="Previous day" title="Previous day">‹</button>
+        <div class="date-title" id="date-title"></div>
+        <button class="icon-button" id="next-day" type="button" aria-label="Next day" title="Next day">›</button>
+        <button class="today-button" id="today-button" type="button">Today</button>
+      </div>
+    </section>
+
+    <section class="summary-strip" aria-label="Daily plan summary">
+      <div class="summary-stat"><strong id="planned-time">0m</strong><span>planned</span></div>
+      <span class="summary-divider" aria-hidden="true"></span>
+      <div class="summary-stat"><strong id="open-time">12h</strong><span>open</span></div>
+      <span class="summary-divider" aria-hidden="true"></span>
+      <div class="summary-stat"><strong id="done-count">0 / 0</strong><span>complete</span></div>
+      <div class="capacity" aria-label="Planned time used">
+        <div class="capacity-track"><div class="capacity-fill" id="capacity-fill"></div></div>
+        <span id="capacity-label">0% planned</span>
+      </div>
+    </section>
+
+    <div class="workspace">
+      <section class="schedule-panel" aria-labelledby="schedule-title">
+        <div class="section-heading">
+          <h2 class="section-title" id="schedule-title">Time plan <span class="section-count" id="schedule-count">0 blocks</span></h2>
+          <button class="subtle-action" id="carry-button" type="button" disabled>Carry unfinished →</button>
+        </div>
+        <div class="capture-form-wrap">
+          <form class="capture-form" id="task-form">
+            <input id="task-title" type="text" maxlength="120" placeholder="Add a task to your day..." aria-label="Task name" required>
+            <select id="task-duration" aria-label="Estimated duration">
+              <option value="30">30 min</option>
+              <option value="45">45 min</option>
+              <option value="60">1 hour</option>
+              <option value="90">1.5 hours</option>
+              <option value="120">2 hours</option>
+            </select>
+            <select id="task-priority" aria-label="Task priority">
+              <option value="should">Should do</option>
+              <option value="must">Must do</option>
+              <option value="could">Could do</option>
+            </select>
+            <button class="add-button" type="submit" aria-label="Add task" title="Add task">+</button>
+          </form>
+        </div>
+        <div class="alert-banner" id="capacity-warning" role="status"></div>
+        <div class="timeline-shell">
+          <div class="time-rail" id="time-rail" aria-hidden="true"></div>
+          <div class="events-area" id="events-area" aria-label="Schedule from 8 AM to 8 PM">
+            <div class="empty-timeline" id="empty-timeline"><strong>A little space to work with.</strong><span>Schedule a task from your list, or let Daymark find room for you.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="queue-panel" aria-labelledby="queue-title">
+        <div class="section-heading queue-heading">
+          <h2 class="section-title" id="queue-title">Task list <span class="section-count" id="queue-count">0 tasks</span></h2>
+          <div class="queue-heading-right"><button class="plan-button" id="plan-button" type="button" disabled>Plan my day</button></div>
+        </div>
+        <div class="queue-list" id="queue-list"></div>
+        <div class="day-note">
+          <label for="day-note">A note for today</label>
+          <textarea id="day-note" maxlength="1200" placeholder="What's one thing you want to remember?"></textarea>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="focus-backdrop" id="focus-backdrop" hidden>
+  <section class="focus-dialog" role="dialog" aria-modal="true" aria-labelledby="focus-title">
+    <button class="icon-button focus-close" id="focus-close" type="button" aria-label="Close focus mode">×</button>
+    <p class="focus-kicker">One thing at a time</p>
+    <h2 class="focus-title" id="focus-title"></h2>
+    <div class="timer-face" id="timer-face"><div class="timer-inner" id="timer-display">25:00</div></div>
+    <p class="focus-hint" id="focus-hint">A focused 25-minute session</p>
+    <div class="focus-controls">
+      <button class="focus-start" id="focus-toggle" type="button">Start focus</button>
+      <button class="focus-done" id="focus-complete" type="button">Mark complete</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "daymark-planner-v1";
+  const DAY_START = 8 * 60;
+  const DAY_END = 20 * 60;
+  const SLOT_HEIGHT = 58;
+  const FOCUS_SECONDS = 25 * 60;
+  const today = new Date();
+  let selectedDate = localDateKey(today);
+  let data = loadData();
+  let toastTimer;
+  let focusTaskId = null;
+  let focusInterval = null;
+  let focusRemaining = FOCUS_SECONDS;
+  let focusEndTime = 0;
+  let focusRunning = false;
+
+  const byId = id => document.getElementById(id);
+  const dateTitle = byId("date-title");
+  const queueList = byId("queue-list");
+  const eventsArea = byId("events-area");
+  const warning = byId("capacity-warning");
+
+  function localDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function addDays(dateKey, amount) {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + amount);
+    return localDateKey(date);
+  }
+
+  function loadData() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      return {
+        tasks: Array.isArray(saved.tasks) ? saved.tasks.filter(task => task && typeof task.id === "string" && typeof task.title === "string" && typeof task.date === "string") : [],
+        notes: saved.notes && typeof saved.notes === "object" ? saved.notes : {}
+      };
+    } catch {
+      return { tasks: [], notes: {} };
+    }
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function visibleTasks() {
+    return data.tasks.filter(task => task.date === selectedDate);
+  }
+
+  function durationLabel(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    if (!hours) return `${remainder} min`;
+    if (!remainder) return `${hours} hr${hours === 1 ? "" : "s"}`;
+    return `${hours}h ${remainder}m`;
+  }
+
+  function compactDuration(minutes) {
+    const hours = Math.floor(minutes / 60);
+    const remainder = minutes % 60;
+    return hours ? `${hours}h${remainder ? ` ${remainder}m` : ""}` : `${remainder}m`;
+  }
+
+  function displayTime(minutes) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    const suffix = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+  }
+
+  function toMinutes(time) {
+    if (!/^\d{2}:\d{2}$/.test(time || "")) return null;
+    const [hours, minutes] = time.split(":").map(Number);
+    if (hours > 23 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  function safeText(value) {
+    return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+  }
+
+  function showToast(message) {
+    const toast = byId("toast");
+    toast.textContent = message;
+    toast.classList.add("visible");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("visible"), 2600);
+  }
+
+  function dateFromKey(key) {
+    const [year, month, day] = key.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  function updateHeader() {
+    const date = dateFromKey(selectedDate);
+    const isToday = selectedDate === localDateKey(today);
+    dateTitle.textContent = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }).format(date);
+    byId("weekday-label").textContent = isToday ? "YOUR DAILY PLAN · TODAY" : `YOUR DAILY PLAN · ${new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(date).toUpperCase()}`;
+    byId("today-button").hidden = isToday;
+  }
+
+  function scheduledTasks(tasks) {
+    return tasks.filter(task => task.start).sort((a, b) => a.start.localeCompare(b.start));
+  }
+
+  function findOpenTime(duration, tasks, from) {
+    if (from === undefined) {
+      if (selectedDate === localDateKey(new Date())) {
+        const now = new Date();
+        from = (Math.floor((now.getHours() * 60 + now.getMinutes()) / 15) + 1) * 15;
+      } else {
+        from = DAY_START;
+      }
+    }
+    const occupied = scheduledTasks(tasks).map(task => ({ start: toMinutes(task.start), end: toMinutes(task.start) + Number(task.duration) }));
+    for (let candidate = Math.max(DAY_START, Math.ceil(from / 15) * 15); candidate + duration <= DAY_END; candidate += 15) {
+      if (!occupied.some(slot => candidate < slot.end && candidate + duration > slot.start)) return candidate;
+    }
+    return null;
+  }
+
+  function renderTimeline(tasks) {
+    const oldEvents = eventsArea.querySelectorAll(".event, .now-line");
+    oldEvents.forEach(node => node.remove());
+    const rail = byId("time-rail");
+    rail.replaceChildren();
+    for (let hour = 8; hour <= 20; hour += 1) {
+      const label = document.createElement("span");
+      label.className = "time-label";
+      label.style.top = `${(hour - 8) * SLOT_HEIGHT}px`;
+      label.textContent = `${hour % 12 || 12}${hour < 12 ? "a" : "p"}`;
+      rail.append(label);
+    }
+
+    const planned = scheduledTasks(tasks);
+    byId("empty-timeline").hidden = planned.length > 0;
+    for (const task of planned) {
+      const start = toMinutes(task.start);
+      const event = document.createElement("article");
+      event.className = `event priority-${task.priority || "should"}${task.done ? " is-done" : ""}`;
+      event.style.top = `${(start - DAY_START) * SLOT_HEIGHT / 60 + 3}px`;
+      event.style.height = `${Math.max(Number(task.duration) * SLOT_HEIGHT / 60 - 5, 25)}px`;
+      event.dataset.taskId = task.id;
+      event.innerHTML = `
+        <input class="event-check" type="checkbox" aria-label="Mark ${safeText(task.title)} complete" ${task.done ? "checked" : ""}>
+        <div class="event-content"><div class="event-name">${safeText(task.title)}</div><div class="event-meta">${compactDuration(Number(task.duration))}${task.priority === "must" ? " · Must do" : ""}</div></div>
+        <div class="event-actions"><input class="event-time" type="time" aria-label="Start time for ${safeText(task.title)}" value="${safeText(task.start)}"><button class="event-icon" type="button" data-action="focus" aria-label="Focus on ${safeText(task.title)}" title="Focus">↗</button><button class="event-icon" type="button" data-action="unplan" aria-label="Move ${safeText(task.title)} back to task list" title="Move to task list">↩</button></div>`;
+      eventsArea.append(event);
+    }
+
+    if (selectedDate === localDateKey(new Date())) {
+      const now = new Date();
+      const minute = now.getHours() * 60 + now.getMinutes();
+      if (minute >= DAY_START && minute <= DAY_END) {
+        const nowLine = document.createElement("div");
+        nowLine.className = "now-line";
+        nowLine.style.top = `${(minute - DAY_START) * SLOT_HEIGHT / 60}px`;
+        eventsArea.append(nowLine);
+      }
+    }
+  }
+
+  function renderQueue(tasks) {
+    const unscheduled = tasks.filter(task => !task.start);
+    const list = tasks;
+    const actionable = unscheduled.filter(task => !task.done);
+    const completed = list.filter(task => task.done).length;
+    byId("queue-count").textContent = `${actionable.length} to plan`;
+    byId("schedule-count").textContent = `${scheduledTasks(list).length} block${scheduledTasks(list).length === 1 ? "" : "s"}`;
+    byId("done-count").textContent = `${completed} / ${list.length}`;
+    byId("plan-button").disabled = actionable.length === 0;
+
+    if (!unscheduled.length) {
+      queueList.innerHTML = `<div class="empty-queue"><strong>${list.length ? "Everything has a place." : "Start with one thing."}</strong><span>${list.length ? "Your unplanned list is clear. Add another task whenever it comes up." : "Capture what's on your mind. You can schedule it now or later."}</span></div>`;
+      return;
+    }
+
+    const priorityOrder = { must: 0, should: 1, could: 2 };
+    unscheduled.sort((a, b) => (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1) || (a.createdAt || "").localeCompare(b.createdAt || ""));
+    queueList.innerHTML = unscheduled.map(task => `
+      <article class="queue-item${task.done ? " is-done" : ""}" data-task-id="${safeText(task.id)}">
+        <div class="queue-top"><input class="queue-check" type="checkbox" aria-label="Mark ${safeText(task.title)} complete" ${task.done ? "checked" : ""}><div class="queue-body"><div class="queue-name">${safeText(task.title)}</div><div class="queue-details"><span>${durationLabel(Number(task.duration))}</span><span class="priority-tag ${safeText(task.priority || "should")}">${({ must: "Must do", should: "Should do", could: "Could do" })[task.priority] || "Should do"}</span></div></div></div>
+        <div class="queue-actions"><button class="small-button primary" type="button" data-action="schedule" ${task.done ? "disabled" : ""}>Schedule</button><button class="small-button" type="button" data-action="focus" ${task.done ? "disabled" : ""}>Focus</button><button class="small-button danger" type="button" data-action="delete" aria-label="Delete ${safeText(task.title)}">Delete</button></div>
+      </article>`).join("");
+  }
+
+  function renderSummary(tasks) {
+    const planned = scheduledTasks(tasks).reduce((sum, task) => sum + Number(task.duration || 0), 0);
+    const open = Math.max(0, DAY_END - DAY_START - planned);
+    const totalRemaining = tasks.filter(task => !task.done).reduce((sum, task) => sum + Number(task.duration || 0), 0);
+    const plannedPct = Math.min(100, planned / (DAY_END - DAY_START) * 100);
+    byId("planned-time").textContent = compactDuration(planned);
+    byId("open-time").textContent = compactDuration(open);
+    byId("capacity-label").textContent = `${Math.round(plannedPct)}% planned`;
+    byId("capacity-fill").style.width = `${plannedPct}%`;
+    byId("capacity-fill").classList.toggle("over", totalRemaining > DAY_END - DAY_START);
+    byId("carry-button").disabled = !tasks.some(task => !task.done);
+
+    const unplanned = tasks.filter(task => !task.start && !task.done).reduce((sum, task) => sum + Number(task.duration || 0), 0);
+    const overCapacity = planned + unplanned > DAY_END - DAY_START;
+    warning.classList.toggle("visible", overCapacity);
+    warning.textContent = overCapacity ? `There are ${compactDuration(planned + unplanned)} of tasks for a ${compactDuration(DAY_END - DAY_START)} day. Choose what matters most; ${compactDuration(Math.max(0, planned + unplanned - (DAY_END - DAY_START)))} will need another day.` : "";
+  }
+
+  function render() {
+    updateHeader();
+    const tasks = visibleTasks();
+    renderSummary(tasks);
+    renderTimeline(tasks);
+    renderQueue(tasks);
+    byId("day-note").value = data.notes[selectedDate] || "";
+  }
+
+  function taskById(id) {
+    return data.tasks.find(task => task.id === id);
+  }
+
+  function saveAndRender() {
+    saveData();
+    render();
+  }
+
+  function addTask(title, duration, priority) {
+    data.tasks.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      title: title.trim(),
+      duration: Number(duration),
+      priority,
+      date: selectedDate,
+      start: null,
+      done: false,
+      createdAt: new Date().toISOString()
+    });
+    saveAndRender();
+  }
+
+  function scheduleTask(task) {
+    const start = findOpenTime(Number(task.duration), visibleTasks());
+    if (start === null) {
+      showToast("No open block fits that estimate. Try shortening a task or moving one to another day.");
+      return;
+    }
+    task.start = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
+    saveAndRender();
+    showToast(`Scheduled for ${displayTime(start)}.`);
+  }
+
+  function planDay() {
+    const tasks = visibleTasks();
+    const unscheduled = tasks.filter(task => !task.start && !task.done).sort((a, b) => {
+      const rank = { must: 0, should: 1, could: 2 };
+      return (rank[a.priority] ?? 1) - (rank[b.priority] ?? 1) || (a.createdAt || "").localeCompare(b.createdAt || "");
+    });
+    let scheduledCount = 0;
+    for (const task of unscheduled) {
+      const start = findOpenTime(Number(task.duration), visibleTasks());
+      if (start === null) continue;
+      task.start = `${String(Math.floor(start / 60)).padStart(2, "0")}:${String(start % 60).padStart(2, "0")}`;
+      scheduledCount += 1;
+    }
+    saveAndRender();
+    const remaining = visibleTasks().filter(task => !task.start && !task.done).length;
+    if (remaining) showToast(`${scheduledCount} task${scheduledCount === 1 ? "" : "s"} scheduled. ${remaining} need more room.`);
+    else showToast(scheduledCount ? `${scheduledCount} task${scheduledCount === 1 ? "" : "s"} placed in open time.` : "Your day is already planned.");
+  }
+
+  function carryForward() {
+    const unfinished = visibleTasks().filter(task => !task.done);
+    if (!unfinished.length) return;
+    const nextDate = addDays(selectedDate, 1);
+    unfinished.forEach(task => { task.date = nextDate; task.start = null; });
+    saveAndRender();
+    showToast(`${unfinished.length} unfinished task${unfinished.length === 1 ? "" : "s"} moved to tomorrow's list.`);
+  }
+
+  function updateTaskCompletion(task, done) {
+    task.done = done;
+    saveAndRender();
+  }
+
+  function beginFocus(task) {
+    focusTaskId = task.id;
+    focusRemaining = FOCUS_SECONDS;
+    focusRunning = false;
+    clearInterval(focusInterval);
+    byId("focus-title").textContent = task.title;
+    byId("focus-hint").textContent = "A focused 25-minute session";
+    byId("focus-toggle").textContent = "Start focus";
+    byId("focus-backdrop").hidden = false;
+    updateTimerFace();
+    byId("focus-toggle").focus();
+  }
+
+  function updateTimerFace() {
+    const minutes = Math.floor(focusRemaining / 60);
+    const seconds = focusRemaining % 60;
+    byId("timer-display").textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    const progress = (1 - focusRemaining / FOCUS_SECONDS) * 100;
+    byId("timer-face").style.setProperty("--timer-progress", `${progress}%`);
+  }
+
+  function closeFocus() {
+    clearInterval(focusInterval);
+    focusRunning = false;
+    byId("focus-backdrop").hidden = true;
+    focusTaskId = null;
+  }
+
+  function toggleFocusTimer() {
+    if (!focusRunning) {
+      if (focusRemaining <= 0) focusRemaining = FOCUS_SECONDS;
+      focusRunning = true;
+      focusEndTime = Date.now() + focusRemaining * 1000;
+      byId("focus-toggle").textContent = "Pause session";
+      byId("focus-hint").textContent = "Stay with this one thing.";
+      clearInterval(focusInterval);
+      focusInterval = setInterval(() => {
+        focusRemaining = Math.max(0, Math.ceil((focusEndTime - Date.now()) / 1000));
+        updateTimerFace();
+        if (!focusRemaining) {
+          clearInterval(focusInterval);
+          focusRunning = false;
+          byId("focus-toggle").textContent = "Start another";
+          byId("focus-hint").textContent = "Session complete. Take a short break.";
+          showToast("Focus session complete. Nice work.");
+        }
+      }, 250);
+    } else {
+      focusRemaining = Math.max(0, Math.ceil((focusEndTime - Date.now()) / 1000));
+      clearInterval(focusInterval);
+      focusRunning = false;
+      byId("focus-toggle").textContent = "Resume focus";
+      byId("focus-hint").textContent = "Session paused";
+      updateTimerFace();
+    }
+  }
+
+  byId("task-form").addEventListener("submit", event => {
+    event.preventDefault();
+    const input = byId("task-title");
+    if (!input.value.trim()) return;
+    addTask(input.value, byId("task-duration").value, byId("task-priority").value);
+    input.value = "";
+    input.focus();
+  });
+
+  byId("previous-day").addEventListener("click", () => { selectedDate = addDays(selectedDate, -1); render(); });
+  byId("next-day").addEventListener("click", () => { selectedDate = addDays(selectedDate, 1); render(); });
+  byId("today-button").addEventListener("click", () => { selectedDate = localDateKey(today); render(); });
+  byId("plan-button").addEventListener("click", planDay);
+  byId("carry-button").addEventListener("click", carryForward);
+  byId("day-note").addEventListener("input", event => {
+    data.notes[selectedDate] = event.target.value;
+    saveData();
+  });
+
+  queueList.addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const taskElement = button.closest("[data-task-id]");
+    const task = taskById(taskElement.dataset.taskId);
+    if (!task) return;
+    if (button.dataset.action === "schedule") scheduleTask(task);
+    if (button.dataset.action === "focus") beginFocus(task);
+    if (button.dataset.action === "delete") {
+      data.tasks = data.tasks.filter(item => item.id !== task.id);
+      saveAndRender();
+      showToast("Task deleted.");
+    }
+  });
+
+  queueList.addEventListener("change", event => {
+    if (!event.target.matches(".queue-check")) return;
+    const task = taskById(event.target.closest("[data-task-id]").dataset.taskId);
+    if (task) updateTaskCompletion(task, event.target.checked);
+  });
+
+  eventsArea.addEventListener("click", event => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const task = taskById(button.closest("[data-task-id]").dataset.taskId);
+    if (!task) return;
+    if (button.dataset.action === "focus") beginFocus(task);
+    if (button.dataset.action === "unplan") {
+      task.start = null;
+      saveAndRender();
+      showToast("Moved back to your task list.");
+    }
+  });
+
+  eventsArea.addEventListener("change", event => {
+    const eventCard = event.target.closest(".event");
+    if (!eventCard) return;
+    const task = taskById(eventCard.dataset.taskId);
+    if (!task) return;
+    if (event.target.matches(".event-check")) {
+      updateTaskCompletion(task, event.target.checked);
+    } else if (event.target.matches(".event-time")) {
+      const start = toMinutes(event.target.value);
+      const end = start === null ? null : start + Number(task.duration);
+      const overlaps = start === null || start < DAY_START || end > DAY_END || visibleTasks().some(other => other.id !== task.id && other.start && start < toMinutes(other.start) + Number(other.duration) && end > toMinutes(other.start));
+      if (overlaps) {
+        showToast("That time conflicts with another block or falls outside 8 AM–8 PM.");
+        render();
+        return;
+      }
+      task.start = event.target.value;
+      saveAndRender();
+    }
+  });
+
+  byId("focus-toggle").addEventListener("click", toggleFocusTimer);
+  byId("focus-close").addEventListener("click", closeFocus);
+  byId("focus-backdrop").addEventListener("click", event => { if (event.target === byId("focus-backdrop")) closeFocus(); });
+  byId("focus-complete").addEventListener("click", () => {
+    const task = taskById(focusTaskId);
+    if (task) {
+      task.done = true;
+      saveAndRender();
+    }
+    closeFocus();
+    showToast("Marked complete. Good job protecting your focus.");
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !byId("focus-backdrop").hidden) closeFocus();
+  });
+
+  byId("export-button").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...data }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `daymark-${selectedDate}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast("Planner data exported.");
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
