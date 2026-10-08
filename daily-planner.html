@@ -740,7 +740,7 @@ h1 { margin: 0; font-size: clamp(28px, 4vw, 38px); font-weight: 700; letter-spac
       const end = start === null ? null : start + Number(task.duration);
       const overlaps = start === null || start < DAY_START || end > DAY_END || visibleTasks().some(other => other.id !== task.id && other.start && start < toMinutes(other.start) + Number(other.duration) && end > toMinutes(other.start));
       if (overlaps) {
-        showToast("That time conflicts with another block or falls outside 8 AM–8 PM.");
+        showToast("That time conflicts with another block or falls outside 8:00 AM–8:00 PM.");
         render();
         return;
       }
