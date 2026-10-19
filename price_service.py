@@ -1,26 +1,25 @@
 """HTTP API for comparing product prices on Amazon.in and Flipkart."""
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote_plus
+from pathlib import Path
 
 import requests
 from fastapi import FastAPI, Query
+from fastapi.responses import FileResponse
 
 from price_compare import price_value, search_amazon, search_flipkart
 
 app = FastAPI(title="Product Price Comparison API", version="1.0.0")
+UI_FILE = Path(__file__).with_name("price_search.html")
 SEARCHERS = {
     "amazon": search_amazon,
     "flipkart": search_flipkart,
 }
 
 
-@app.get("/")
+@app.get("/", response_class=FileResponse, include_in_schema=False)
 def index():
-    return {
-        "service": "Product Price Comparison API",
-        "docs": "/docs",
-        "search_endpoint": "/api/search?item=iphone%2015",
-    }
+    return FileResponse(UI_FILE, media_type="text/html")
 
 
 @app.get("/api/search")
