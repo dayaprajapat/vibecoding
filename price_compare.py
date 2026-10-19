@@ -10,20 +10,41 @@ import re
 from urllib.parse import quote_plus, urljoin
 
 import requests
+from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
+from urllib3.util.retry import Retry
 
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
     ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-IN,en;q=0.9",
 }
+AMAZON_HEADERS = {
+    **HEADERS,
+    "Referer": "https://www.amazon.in/",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-User": "?1",
+}
+SESSION = requests.Session()
+SESSION.mount("https://", HTTPAdapter(max_retries=Retry(
+    total=2,
+    backoff_factor=0.3,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=frozenset({"GET"}),
+    respect_retry_after_header=False,
+    raise_on_status=False,
+)))
 PRICE_RE = re.compile(r"₹\s?[\d,]+(?:\.\d+)?")
 
 
-def fetch(url):
-    resp = requests.get(url, headers=HEADERS, timeout=15)
+def fetch(url, headers=HEADERS):
+    resp = SESSION.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
     return BeautifulSoup(resp.text, "html.parser")
 
@@ -34,7 +55,7 @@ def price_value(price):
 
 def search_amazon(query, limit):
     base = "https://www.amazon.in"
-    soup = fetch(f"{base}/s?k={quote_plus(query)}")
+    soup = fetch(f"{base}/s?k={quote_plus(query)}", headers=AMAZON_HEADERS)
     results = []
     for item in soup.select('div[data-component-type="s-search-result"]'):
         title_el = item.select_one("h2")
@@ -108,6 +129,9 @@ def main():
             results = func(query, args.limit)
         except requests.RequestException as exc:
             print(f"\n=== {site} ===\n  Error fetching results: {exc}")
+            if site == "Amazon" and getattr(getattr(exc, "response", None), "status_code", None) == 503:
+                search_url = f"https://www.amazon.in/s?k={quote_plus(query)}"
+                print(f"  Open the search in a browser: {search_url}")
             continue
         print_results(site, results)
         if results:
