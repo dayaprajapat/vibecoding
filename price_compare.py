@@ -1,9 +1,10 @@
 """Compare product prices on Amazon.in and Flipkart.
 
 Usage:
-    pip install requests beautifulsoup4
+    pip install -r requirements.txt
     python price_compare.py "iphone 15"
     python price_compare.py            # prompts for the item name
+    uvicorn price_service:app --reload # starts the HTTP API
 """
 import argparse
 import re
